@@ -1,0 +1,15 @@
+---
+title: "In-Class_Ex03"
+author: "Chen Jinghui"
+date: "Sep 9 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false #no warning messages go out
+  freeze: true  #will not re-render all items
+---
+
+```{r}
+pacman::p_load(sf, spNetwork, tmap, tidyverse)
+```
