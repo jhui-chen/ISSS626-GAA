@@ -1,0 +1,9 @@
+---
+title: "ISSS626-GAA"
+---
+
+Hi! I am Chen Jinghui, student number: 01481676. My email is jh.chen.2023\@mitb.smu.edu.sg
+
+Welcome to **ISSS626 Geospatial Analytics and Applications**. In this website, you will find my coursework prepared for this course.
+
+Updated as of 20240909
