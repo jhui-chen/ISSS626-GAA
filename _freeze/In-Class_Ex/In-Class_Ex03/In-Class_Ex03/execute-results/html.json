@@ -1,0 +1,14 @@
+{
+  "hash": "5d7689b1f477c175bdc373b0646f1097",
+  "result": {
+    "markdown": "---\ntitle: \"In-Class_Ex03\"\nauthor: \"Chen Jinghui\"\ndate: \"Sep 9 2024\"\ndate-modified: \"last-modified\"\nexecute: \n  eval: true\n  echo: true\n  message: false #no warning messages go out\n  freeze: true  #will not re-render all items\n---\n\n::: {.cell}\n\n```{.r .cell-code}\npacman::p_load(sf, spNetwork, tmap, tidyverse)\n```\n:::",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
