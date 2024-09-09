@@ -1,0 +1,454 @@
+---
+title: "Take-Home Ex01"
+author: "Chen Jinghui"
+date: "Sep 7 2024"
+date-modified: "last-modified"
+execute: 
+  eval: true
+  echo: true
+  message: false #no warning messages go out
+  freeze: true  #will not re-render all items
+---
+
+Geospatial Analytics for Social Good: Thailand Road Accident Case Study
+
+1.0 Installing and Loading the R packages
+
+```{r}
+#| eval: false
+pacman::p_load(sf, raster, spatstat, tmap, tidyverse, dplyr, readr, spNetwork)
+```
+
+2.0 Importing the spatial data
+
+2.1 Importing in Thailand road accidents in Bangkok province between 2019-2022
+
+The code below filters out for NA and blanks in the longitude, latitude, and province columns. It also filters specifically for "Bangkok" province, which is the area of this study. The coordinate reference system is specified as EPSG:32647 (UTM zone 47N coordinate system), which is suitable for spatial analyses within the Bangkok region. This is because WGS84 is not ideal for precise distance and area calculations as it represents Earth as a curved surface, UTM, on the other hand, projects the Earth onto a flat plane, which reduces distortions and allows for more accurate measurements.
+
+```{r}
+#| eval: false
+rdacc_sf <- read_csv("C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/thai_road_accident_2019_2022.csv") %>%
+  mutate(month = month(incident_datetime)) %>%
+  mutate(monthfac = month(incident_datetime, label = TRUE, abbr = TRUE)) %>%
+  mutate(dayofweek = day(incident_datetime)) %>%
+  filter(!is.na(longitude) & longitude != "",   # filter out NA and blanks in longitude
+         !is.na(latitude) & latitude != "",     # filter out NA and blanks in latitude
+         !is.na(province_en) & province_en != "", # filter out NA and blanks in province
+         province_en == "Bangkok") %>%          # filter for province "Bangkok"
+  st_as_sf(coords = c("longitude", "latitude"), crs = 4326) %>% #convert data frame into simple feature (sf). Tells R which columns are long and lat, and crs = 4326 specifies the coordinate reference system are in WGS 84. 
+  st_transform(crs = 32647) #projects spatial data into the UTM zone 47N coordinate system.
+#view(rdacc_sf)
+```
+
+Checks on coordinate reference system.
+
+```{r}
+#| eval: false
+st_crs(rdacc_sf) 
+```
+
+Having a look.
+
+```{r}
+#| eval: false
+rdacc_sf
+```
+
+```{r}
+#| eval: false
+plot(st_geometry(rdacc_sf))
+```
+
+Get month and day of week of the Bangkok accident
+#label = true make month factor, abbr= abbrevation
+```{r}
+#rdacc_sf <- rdacc_sf %>%
+#  mutate(month = month(incident_datetime)) %>%
+#  mutate(monthfac = month(incident_datetime, label = TRUE, abbr = TRUE)) %>%
+#  mutate(dayofweek = day(incident_datetime))
+```
+
+2.2 Importing in Thailand road shapefile
+
+Importing the Thailand road shapefile The coordinate reference system is specified as EPSG:32647 (UTM zone 47N coordinate system), which is suitable for spatial analyses within the Bangkok region.
+
+```{r}
+#| eval: false
+road <- st_read(dsn = "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data",
+                layer = "hotosm_tha_roads_lines_shp")
+st_crs(road) <- 4326 #Set the CRS manually to WGS 84 (EPSG:4326)
+road <- st_transform(road, crs = 32647) #Transform the CRS to UTM zone 47N (EPSG:32647)
+```
+
+Checks on coordinate reference system.
+
+```{r}
+#| eval: false
+st_crs(road)
+```
+
+Having a look.
+
+```{r}
+#| eval: false
+road
+```
+
+```{r}
+#| eval: false
+#plot(road)
+```
+
+2.3 Importing in Thailand - Subnational Administrative Boundaries
+
+Investigating the layers available in my local drive. The "tha_admbnda_adm1_rtsd_20220121" layer has 77 features, most likely being the provincial boundaries, as there are 77 provinces in Thailand and Bangkok is one of them.
+
+```{r}
+#| eval: false
+gdb_layers <- st_layers(dsn = "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data")
+print(gdb_layers)
+```
+
+```{r}
+#| eval: false
+province <- st_read(dsn = "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data", layer = "tha_admbnda_adm1_rtsd_20220121")
+st_crs(province) <- 4326 #Set the CRS manually to WGS 84 (EPSG:4326)
+province <- st_transform(province, crs = 32647) #Transform the CRS to UTM zone 47N (EPSG:32647)
+```
+
+Checks on coordinate reference system.
+
+```{r}
+#| eval: false
+st_crs(province)
+```
+
+Having a look.
+
+```{r}
+#| eval: false
+province
+```
+
+```{r}
+#| eval: false
+bkk <- province %>%
+  filter(ADM1_EN == "Bangkok") # Filter for Bangkok province
+
+print(bkk)
+```
+
+```{r}
+#| eval: false
+plot(st_geometry(bkk))
+```
+
+3.0 Geospatial Data wrangling
+
+Check for any duplicated accidents in rdacc_sf. No duplicated accidents events.
+
+```{r}
+#| eval: false
+any(duplicated(rdacc_sf))
+```
+
+```{r}
+#| eval: false
+bkk <- st_transform(bkk, crs = st_crs(road)) # Ensure the bkk shapefile has the same CRS
+road_bkk <- st_intersection(road, bkk) # Perform the spatial intersection to filter roads in Bangkok
+```
+
+```{r}
+#| eval: false
+#plot(road_bkk)  ## don't run me, very long
+```
+
+Create a sf object with only geometry of bkk roads
+
+```{r}
+#| eval: false
+road_bkk_geom <- st_geometry(road_bkk) #Retain only the geometry of road_bkk
+road_bkk_geom_sf <- st_sf(geometry = road_bkk_geom) # Convert the geometry back to a simple feature object
+```
+
+Saving road_bkk_geom_sf
+
+```{r}
+#| eval: false
+save_path <- "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/processed_data/road_bkk_geom_sf.rds" # Specify the file path where you want to save the object
+
+saveRDS(road_bkk_geom_sf, file = save_path) # Save the road_bkk_geom_sf object to the specified file
+```
+
+loading road_bkk_geom_sf back
+
+```{r}
+#| eval: false
+road_bkk_geom_sf <- readRDS("C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/processed_data/road_bkk_geom_sf.rds")
+```
+
+```{r}
+#| eval: false
+plot(st_geometry(road_bkk_geom_sf))
+```
+
+4.0 Geospatial data visualisation
+
+4.1 Basic plot of BKK roads and road accidents. This plot provides an overview of the accidents on roads in BKK and serves as a check that the data has been processed correctly. Analysis: There are many roads around BKK area, but it seems that the accidents are clustered around what appears to be expressways and major roads.
+
+```{r}
+#| eval: false
+plot(st_geometry(road_bkk_geom_sf))
+plot(rdacc_sf,add=T,col='red',pch = 19)
+```
+
+4.2 Interactive map of accidents in Bangkok area This plot allows for exploratory data analysis by zooming, panning and inspecting specific locations. Analysis: This helps to show that the accidents are indeed clustered around expressways and major roads.
+
+```{r}
+#| eval: false
+tmap_mode('view')
+  tm_shape(rdacc_sf) +     # Second shape: accident points
+  tm_dots(col = "red", size = 0.1) +  # Visualize accident points as small red dots
+  tm_shape(bkk) +          # Third shape: Bangkok boundaries
+  tm_borders(lwd = 2)
+tmap_mode("plot")
+```
+
+4.3 Accidents in Bangkok area over 2019-2022, separated by year This plot shows the temporarl aspect of the accidents by splitting them into yearly facets. Analysis:
+
+```{r}
+#| eval: false
+rdacc_sf <- rdacc_sf %>%
+  mutate(incident_year = format(as.Date(incident_datetime), "%Y"))
+
+tmap_mode('plot')
+
+tm_shape(road_bkk_geom_sf) + 
+  tm_lines(lwd = 0.3) +                     # 
+  tm_shape(rdacc_sf) + 
+  tm_dots(col = "red", size = 0.1) +        # Small red dots for accidents
+  tm_facets(by = "incident_year", nrow = 2, ncol = 2) +  # Facets by year, arranged in 2x2 grid
+  tm_layout(title = "Accidents in Bangkok by Year")
+```
+
+5.0 Network KDE (NKDE) Analysis
+
+5.1 Preparing the lixels objects Checking for unique geometry type in road_bkk_geom_sf. There are multilinestrings and linestrings
+
+```{r}
+#| eval: false
+print(unique(st_geometry_type(road_bkk_geom_sf)))
+```
+
+5.2 Creating the lixels objects test1####
+
+```{r}
+#| eval: false
+road_bkk_lines <- st_cast(road_bkk_geom_sf, "LINESTRING") # Function to split MULTILINESTRING into LINESTRINGs
+
+lixels <- lixelize_lines.mc(  # Now, apply lixelize_lines.mc() to the filtered object
+  road_bkk_lines,        # Your filtered road network object
+  700,                   # Length of each lixel in meters
+  350,                   # Minimum distance between points for lixel creation
+  verbose = TRUE,        # Show progress
+  chunk_size = 100)       # Process in chunks of 100 for efficiency
+```
+
+Check lixels plot test1
+
+```{r}
+#| eval: false
+plot(lixels, lwd = 0.3)
+```
+
+run all three methods, simple, continous, and discontinous for nkde. Prof say result about the same. for the bandwidth, to try min 25m, max can 700m
+
+```{r}
+
+```
+
+spatial, temporal and spatial-temporal https://jeremygelb.github.io/spNetwork/articles/TNKDE.html#introduction
+
+5.2 Creating the lixels objects test2...This kept all the linestrings from multilinestring but plot looks really weird. Continue without using this test2
+
+```{r}
+#road_bkk_lines <- st_collection_extract(road_bkk_geom_sf, "LINESTRING") # Extract LINESTRING geometries from MULTILINESTRING
+
+#lixels <- lixelize_lines.mc(  # Now, apply lixelize_lines.mc() to the filtered object
+#  road_bkk_lines,        # Your filtered road network object
+#  700,                   # Length of each lixel in meters
+#  350,                   # Minimum distance between points for lixel creation
+#  verbose = TRUE,        # Show progress
+#  chunk_size = 100       # Process in chunks of 100 for efficiency
+#)
+```
+
+Check lixels plot test2. Do not use
+
+```{r}
+#plot(lixels, lwd = 0.3)
+```
+
+```{r}
+```
+
+4.1.2
+
+```{r}
+#plot(st_geometry(road))
+#plot(accidents_combined,add=T,col='red',pch = 19)
+```
+
+4.1.2 Accidents in Bangkok area over 2019-2022.
+
+```{r}
+#tmap_mode('plot')
+
+#tm_shape(bkk) +                # Filtered accident points
+#  tm_borders(lwd = 2) +                     # Borders of Bangkok
+##  tm_fill(alpha = 0.1) +                    # Light fill for Bangkok boundaries
+#  tm_shape(rdacc_sf) + 
+#  tm_dots(col = "red", size = 0.1)       # Small red dots for accidents
+```
+
+4.1.3 Accidents in Bangkok area over 2019-2022, separated by year
+
+```{r}
+#rdacc_sf <- rdacc_sf %>%
+#  mutate(incident_year = format(as.Date(incident_datetime), "%Y"))
+
+#tmap_mode('plot')
+
+#tm_shape(bkk) +                # Filtered accident points
+#  tm_borders(lwd = 2) +                     # Borders of Bangkok
+#  tm_fill(alpha = 0.1) +                    # Light fill for Bangkok boundaries
+#  tm_shape(rdacc_sf) + 
+#  tm_dots(col = "red", size = 0.1) +        # Small red dots for accidents
+#  tm_facets(by = "incident_year", nrow = 2, ncol = 2) +  # Facets by year, arranged in 2x2 grid
+#  tm_layout(title = "Accidents in Bangkok by Year")
+```
+
+
+3.1 Combining accident point events (rdacc_sf), road polylines (road) and Bangkok province owin (bkk) #objects
+
+3.1.1 Convert Bangkok province polgyon (bkk) to spatstat object owin Creating owin object for province of Bangkok This is to set the boundary of Bangkok province.
+
+```{r}
+#print(bkk)
+#summary(bkk)
+```
+
+```{r}
+#bkk
+```
+
+```{r}
+#bkk_owin = as.owin(bkk)
+```
+
+```{r}
+#plot(bkk_owin)
+```
+
+3.1.2 Convert road polylines to spatstat ppp format
+
+Convert `road` to ppp objects part1 ##ran for 30 minutes##
+
+```{r}
+###
+#road_coords <- st_coordinates(road) ##ran for 30 minutes##
+###
+```
+
+Convert `road` to ppp objects part 2 ran for another 30 minutes...
+
+```{r}
+###
+#road_ppp <- ppp(x = road_coords[,1], y = road_coords[,2], window = bkk_owin) ##ran for 30 minutes##
+###
+```
+
+3.1.3 Convert rdacc_sf points to spatstat ppp format
+
+Extracting coordinates and temporal data
+
+```{r}
+#accidents_data <- rdacc_sf %>%
+#  st_set_geometry(NULL) %>%
+#  as.data.frame()
+#accidents_coords <- st_coordinates(rdacc_sf)
+#accidents_combined <- data.frame(
+#  x = accidents_coords[,1],
+#  y = accidents_coords[,2],
+#  datetime = accidents_data$incident_datetime)
+```
+
+Creating the ppp object
+
+```{r}
+#accidents_ppp <- ppp(x = accidents_coords[,1], y = accidents_coords[,2], window = bkk_owin)
+```
+
+Check for duplicated data. The duplicates here are because accidents happen at the same location but on different time period
+
+```{r}
+#any(duplicated(accidents_ppp))
+```
+
+Having a look at how many locations have more than one point event.
+
+```{r}
+#multiplicity(accidents_ppp)
+#sum(multiplicity(accidents_ppp) > 1)
+```
+
+4.0 Geospatial data visualisation
+
+4.1 Preliminary geospatial visualisation
+
+4.1.1 Interactive visualisation of accidents in Bangkok area
+
+```{r}
+#tmap_mode('view')
+#  tm_shape(rdacc_sf) +     # Second shape: accident points
+#  tm_dots(col = "red", size = 0.1) +  # Visualize accident points as small red dots
+#  tm_shape(bkk) +          # Third shape: Bangkok boundaries
+#  tm_borders(lwd = 2)
+#tmap_mode("plot")
+```
+
+4.1.2
+
+```{r}
+#plot(st_geometry(road))
+#plot(accidents_combined,add=T,col='red',pch = 19)
+```
+
+4.1.2 Accidents in Bangkok area over 2019-2022.
+
+```{r}
+#tmap_mode('plot')
+
+#tm_shape(bkk) +                # Filtered accident points
+#  tm_borders(lwd = 2) +                     # Borders of Bangkok
+#  tm_fill(alpha = 0.1) +                    # Light fill for Bangkok boundaries
+#  tm_shape(rdacc_sf) + 
+#  tm_dots(col = "red", size = 0.1)       # Small red dots for accidents
+```
+
+4.1.3 Accidents in Bangkok area over 2019-2022, separated by year
+
+```{r}
+#rdacc_sf <- rdacc_sf %>%
+##  mutate(incident_year = format(as.Date(incident_datetime), "%Y"))
+
+#tmap_mode('plot')
+
+#tm_shape(bkk) +                # Filtered accident points
+#  tm_borders(lwd = 2) +                     # Borders of Bangkok
+#  tm_fill(alpha = 0.1) +                    # Light fill for Bangkok boundaries
+#  tm_shape(rdacc_sf) + 
+#  tm_dots(col = "red", size = 0.1) +        # Small red dots for accidents
+#  tm_facets(by = "incident_year", nrow = 2, ncol = 2) +  # Facets by year, arranged in 2x2 grid
+#  tm_layout(title = "Accidents in Bangkok by Year")
+```
