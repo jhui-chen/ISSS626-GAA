@@ -15,7 +15,6 @@ Geospatial Analytics for Social Good: Thailand Road Accident Case Study
 1.0 Installing and Loading the R packages
 
 ```{r}
-#| eval: false
 pacman::p_load(sf, raster, spatstat, tmap, tidyverse, dplyr, readr, spNetwork)
 ```
 
@@ -24,6 +23,8 @@ pacman::p_load(sf, raster, spatstat, tmap, tidyverse, dplyr, readr, spNetwork)
 2.1 Importing in Thailand road accidents in Bangkok province between 2019-2022
 
 The code below filters out for NA and blanks in the longitude, latitude, and province columns. It also filters specifically for "Bangkok" province, which is the area of this study. The coordinate reference system is specified as EPSG:32647 (UTM zone 47N coordinate system), which is suitable for spatial analyses within the Bangkok region. This is because WGS84 is not ideal for precise distance and area calculations as it represents Earth as a curved surface, UTM, on the other hand, projects the Earth onto a flat plane, which reduces distortions and allows for more accurate measurements.
+also, with mutate function, we can get month and day of week of the Bangkok accident 
+#label = true make month factor, abbr= abbrevation
 
 ```{r}
 #| eval: false
@@ -57,15 +58,6 @@ rdacc_sf
 ```{r}
 #| eval: false
 plot(st_geometry(rdacc_sf))
-```
-
-Get month and day of week of the Bangkok accident
-#label = true make month factor, abbr= abbrevation
-```{r}
-#rdacc_sf <- rdacc_sf %>%
-#  mutate(month = month(incident_datetime)) %>%
-#  mutate(monthfac = month(incident_datetime, label = TRUE, abbr = TRUE)) %>%
-#  mutate(dayofweek = day(incident_datetime))
 ```
 
 2.2 Importing in Thailand road shapefile
@@ -110,7 +102,6 @@ print(gdb_layers)
 ```
 
 ```{r}
-#| eval: false
 province <- st_read(dsn = "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data", layer = "tha_admbnda_adm1_rtsd_20220121")
 st_crs(province) <- 4326 #Set the CRS manually to WGS 84 (EPSG:4326)
 province <- st_transform(province, crs = 32647) #Transform the CRS to UTM zone 47N (EPSG:32647)
@@ -131,7 +122,6 @@ province
 ```
 
 ```{r}
-#| eval: false
 bkk <- province %>%
   filter(ADM1_EN == "Bangkok") # Filter for Bangkok province
 
@@ -139,7 +129,10 @@ print(bkk)
 ```
 
 ```{r}
-#| eval: false
+
+```
+
+```{r}
 plot(st_geometry(bkk))
 ```
 
@@ -327,7 +320,6 @@ Check lixels plot test2. Do not use
 #  tm_facets(by = "incident_year", nrow = 2, ncol = 2) +  # Facets by year, arranged in 2x2 grid
 #  tm_layout(title = "Accidents in Bangkok by Year")
 ```
-
 
 3.1 Combining accident point events (rdacc_sf), road polylines (road) and Bangkok province owin (bkk) #objects
 
