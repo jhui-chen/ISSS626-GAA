@@ -27,7 +27,6 @@ also, with mutate function, we can get month and day of week of the Bangkok acci
 #label = true make month factor, abbr= abbrevation
 
 ```{r}
-#| eval: false
 rdacc_sf <- read_csv("C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/thai_road_accident_2019_2022.csv") %>%
   mutate(month = month(incident_datetime)) %>%
   mutate(monthfac = month(incident_datetime, label = TRUE, abbr = TRUE)) %>%
@@ -44,19 +43,16 @@ rdacc_sf <- read_csv("C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/
 Checks on coordinate reference system.
 
 ```{r}
-#| eval: false
 st_crs(rdacc_sf) 
 ```
 
 Having a look.
 
 ```{r}
-#| eval: false
 rdacc_sf
 ```
 
 ```{r}
-#| eval: false
 plot(st_geometry(rdacc_sf))
 ```
 
@@ -65,7 +61,6 @@ plot(st_geometry(rdacc_sf))
 Importing the Thailand road shapefile The coordinate reference system is specified as EPSG:32647 (UTM zone 47N coordinate system), which is suitable for spatial analyses within the Bangkok region.
 
 ```{r}
-#| eval: false
 road <- st_read(dsn = "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data",
                 layer = "hotosm_tha_roads_lines_shp")
 st_crs(road) <- 4326 #Set the CRS manually to WGS 84 (EPSG:4326)
@@ -75,14 +70,12 @@ road <- st_transform(road, crs = 32647) #Transform the CRS to UTM zone 47N (EPSG
 Checks on coordinate reference system.
 
 ```{r}
-#| eval: false
 st_crs(road)
 ```
 
 Having a look.
 
 ```{r}
-#| eval: false
 road
 ```
 
@@ -96,7 +89,6 @@ road
 Investigating the layers available in my local drive. The "tha_admbnda_adm1_rtsd_20220121" layer has 77 features, most likely being the provincial boundaries, as there are 77 provinces in Thailand and Bangkok is one of them.
 
 ```{r}
-#| eval: false
 gdb_layers <- st_layers(dsn = "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data")
 print(gdb_layers)
 ```
@@ -110,14 +102,12 @@ province <- st_transform(province, crs = 32647) #Transform the CRS to UTM zone 4
 Checks on coordinate reference system.
 
 ```{r}
-#| eval: false
 st_crs(province)
 ```
 
 Having a look.
 
 ```{r}
-#| eval: false
 province
 ```
 
@@ -129,10 +119,6 @@ print(bkk)
 ```
 
 ```{r}
-
-```
-
-```{r}
 plot(st_geometry(bkk))
 ```
 
@@ -141,25 +127,21 @@ plot(st_geometry(bkk))
 Check for any duplicated accidents in rdacc_sf. No duplicated accidents events.
 
 ```{r}
-#| eval: false
 any(duplicated(rdacc_sf))
 ```
 
 ```{r}
-#| eval: false
 bkk <- st_transform(bkk, crs = st_crs(road)) # Ensure the bkk shapefile has the same CRS
 road_bkk <- st_intersection(road, bkk) # Perform the spatial intersection to filter roads in Bangkok
 ```
 
 ```{r}
-#| eval: false
 #plot(road_bkk)  ## don't run me, very long
 ```
 
 Create a sf object with only geometry of bkk roads
 
 ```{r}
-#| eval: false
 road_bkk_geom <- st_geometry(road_bkk) #Retain only the geometry of road_bkk
 road_bkk_geom_sf <- st_sf(geometry = road_bkk_geom) # Convert the geometry back to a simple feature object
 ```
@@ -167,7 +149,6 @@ road_bkk_geom_sf <- st_sf(geometry = road_bkk_geom) # Convert the geometry back 
 Saving road_bkk_geom_sf
 
 ```{r}
-#| eval: false
 save_path <- "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/processed_data/road_bkk_geom_sf.rds" # Specify the file path where you want to save the object
 
 saveRDS(road_bkk_geom_sf, file = save_path) # Save the road_bkk_geom_sf object to the specified file
@@ -176,12 +157,10 @@ saveRDS(road_bkk_geom_sf, file = save_path) # Save the road_bkk_geom_sf object t
 loading road_bkk_geom_sf back
 
 ```{r}
-#| eval: false
 road_bkk_geom_sf <- readRDS("C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/processed_data/road_bkk_geom_sf.rds")
 ```
 
 ```{r}
-#| eval: false
 plot(st_geometry(road_bkk_geom_sf))
 ```
 
@@ -190,7 +169,6 @@ plot(st_geometry(road_bkk_geom_sf))
 4.1 Basic plot of BKK roads and road accidents. This plot provides an overview of the accidents on roads in BKK and serves as a check that the data has been processed correctly. Analysis: There are many roads around BKK area, but it seems that the accidents are clustered around what appears to be expressways and major roads.
 
 ```{r}
-#| eval: false
 plot(st_geometry(road_bkk_geom_sf))
 plot(rdacc_sf,add=T,col='red',pch = 19)
 ```
@@ -198,7 +176,6 @@ plot(rdacc_sf,add=T,col='red',pch = 19)
 4.2 Interactive map of accidents in Bangkok area This plot allows for exploratory data analysis by zooming, panning and inspecting specific locations. Analysis: This helps to show that the accidents are indeed clustered around expressways and major roads.
 
 ```{r}
-#| eval: false
 tmap_mode('view')
   tm_shape(rdacc_sf) +     # Second shape: accident points
   tm_dots(col = "red", size = 0.1) +  # Visualize accident points as small red dots
@@ -210,7 +187,6 @@ tmap_mode("plot")
 4.3 Accidents in Bangkok area over 2019-2022, separated by year This plot shows the temporarl aspect of the accidents by splitting them into yearly facets. Analysis:
 
 ```{r}
-#| eval: false
 rdacc_sf <- rdacc_sf %>%
   mutate(incident_year = format(as.Date(incident_datetime), "%Y"))
 
@@ -229,29 +205,41 @@ tm_shape(road_bkk_geom_sf) +
 5.1 Preparing the lixels objects Checking for unique geometry type in road_bkk_geom_sf. There are multilinestrings and linestrings
 
 ```{r}
-#| eval: false
 print(unique(st_geometry_type(road_bkk_geom_sf)))
 ```
 
 5.2 Creating the lixels objects test1####
 
 ```{r}
-#| eval: false
 road_bkk_lines <- st_cast(road_bkk_geom_sf, "LINESTRING") # Function to split MULTILINESTRING into LINESTRINGs
 
-lixels <- lixelize_lines.mc(  # Now, apply lixelize_lines.mc() to the filtered object
+lixels700_25 <- lixelize_lines.mc(  # Now, apply lixelize_lines.mc() to the filtered object
   road_bkk_lines,        # Your filtered road network object
   700,                   # Length of each lixel in meters
-  350,                   # Minimum distance between points for lixel creation
+  25,                   # Minimum distance between points for lixel creation
   verbose = TRUE,        # Show progress
   chunk_size = 100)       # Process in chunks of 100 for efficiency
 ```
 
+Saving lixels700_25
+
+```{r}
+save_path <- "C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/processed_data/lixels700_25.rds" # Specify the file path where you want to save the object
+
+saveRDS(lixels700_25, file = save_path) # Save the road_bkk_geom_sf object to the specified file
+```
+
+loading lixels700_25 back
+
+```{r}
+lixels700_25 <- readRDS("C:/jhui-chen/ISSS626-GAA/Take-Home_Ex/Take-Home_Ex01/data/processed_data/lixels700_25.rds")
+```
+
+
 Check lixels plot test1
 
 ```{r}
-#| eval: false
-plot(lixels, lwd = 0.3)
+plot(lixels700_25, lwd = 0.3)
 ```
 
 run all three methods, simple, continous, and discontinous for nkde. Prof say result about the same. for the bandwidth, to try min 25m, max can 700m
